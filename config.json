@@ -1,0 +1,25 @@
+{
+  "device": {
+    "target": "oneplus9pro.local",
+    "ping_timeout_ms": 2000,
+    "check_interval_s": 30
+  },
+  "mic": {
+    "verify_seconds": 30,
+    "response_timeout_s": 300,
+    "response_cooldown_s": 12,
+    "speech_threshold_db": -40.0,
+    "chunk_seconds": 2
+  },
+  "tts": {
+    "greeting_language": "fr-FR",
+    "panic_language": "de-DE",
+    "greeting_text": "Frere Jacques, Frere Jacques, Dors-tu ? Dors-tu ? Sonnez les matines ! Sonnez les matines ! Din din don, din din don.",
+    "panic_text": "Panikmodus. Storax, du hast in den letzten fuenf Minuten nicht geantwortet. Ich bin im Haus und warte auf deine Rueckmeldung."
+  },
+  "logging": {
+    "log_dir": "logs",
+    "audio_dir": "logs/audio",
+    "transition_dir": "logs/transitions"
+  }
+}

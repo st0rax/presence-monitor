@@ -1,0 +1,12 @@
+# Logs & Laufzeitdaten (können groß werden / personenbezogen)
+logs/
+state.json
+
+# Gebündeltes ffmpeg (als Release-Asset verteilt, nicht im Git)
+ffmpeg.zip
+tools/ffmpeg-*-essentials_build/
+
+# Editor-/OS-Unsinn
+.DS_Store
+Thumbs.db
+*.tmp

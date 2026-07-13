@@ -59,8 +59,25 @@ powershell -ExecutionPolicy Bypass -File presence_monitor.ps1 -Once
 powershell -ExecutionPolicy Bypass -File presence_monitor.ps1 -SelfTest
 ```
 
-Als Dienst im Hintergrund z. B. per geplanter Aufgabe oder `Start-Process`
-starten.
+## Autostart (dauerhaftes Logging)
+
+Damit der Monitor auch ohne offene Session **laufend** protokolliert:
+
+- **Einfach (ohne Admin):** ein Eintrag unter
+  `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` startet das Skript bei
+  jeder Anmeldung im Hintergrund. Ist bereits eingerichtet:
+  ```
+  reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v PresenceMonitor /t REG_SZ /d "powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\Users\storax\Desktop\presence-monitor\presence_monitor.ps1" /f
+  ```
+  Entfernen: `reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v PresenceMonitor /f`
+
+- **Robust (mit Auto-Neustart, benötigt Admin):** `install-task.ps1` legt eine
+  geplante Aufgabe an, die bei Anmeldung startet und bei Absturz neu startet.
+  Als Administrator ausführen:
+  ```
+  powershell -ExecutionPolicy Bypass -File install-task.ps1
+  ```
+  Deinstallieren: `Unregister-ScheduledTask -TaskName 'PresenceMonitor' -Confirm:$false`
 
 ## Logging-Struktur
 

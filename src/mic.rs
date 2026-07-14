@@ -16,6 +16,12 @@ pub struct ClipResult {
     pub duration_s: u32,
 }
 
+/// Lightweight RMS sampling for presence checks (Python `mic_rms`).
+pub trait MicLevelSampler {
+    /// Record `duration_seconds` of audio and return linear RMS in 0..1.
+    fn sample_rms(&self, duration_seconds: f32) -> Result<f32>;
+}
+
 /// Abstraction over microphone capture + level measurement.
 pub trait MicRecorder {
     /// Name of the default capture device (for diagnostics).
@@ -66,6 +72,21 @@ impl FfmpegMic {
             }
         }
         -100.0
+    }
+}
+
+impl MicLevelSampler for FfmpegMic {
+    fn sample_rms(&self, duration_seconds: f32) -> Result<f32> {
+        let secs = duration_seconds.max(0.1).ceil() as u32;
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let tmp = std::env::temp_dir().join(format!("pres_rms_{stamp}.wav"));
+        let _clip = self.record_clip(secs, &tmp)?;
+        let rms = pcm16_wav_rms(&tmp)?;
+        let _ = std::fs::remove_file(&tmp);
+        Ok(rms)
     }
 }
 
@@ -174,18 +195,92 @@ fn which_on_path(bin: &str) -> Option<std::path::PathBuf> {
     None
 }
 
+/// Parse 16-bit mono PCM WAV and return linear RMS (0..1).
+pub fn pcm16_wav_rms(path: &Path) -> Result<f32> {
+    let data = std::fs::read(path).with_context(|| format!("read wav: {}", path.display()))?;
+    if data.len() < 44 {
+        return Ok(0.0);
+    }
+    // Standard PCM WAV: find "data" chunk.
+    let mut i = 12usize;
+    while i + 8 <= data.len() {
+        let tag = &data[i..i + 4];
+        let size = u32::from_le_bytes(data[i + 4..i + 8].try_into().unwrap()) as usize;
+        if tag == b"data" {
+            let start = i + 8;
+            let end = (start + size).min(data.len());
+            let samples = &data[start..end];
+            if samples.is_empty() {
+                return Ok(0.0);
+            }
+            let mut sum = 0f64;
+            let mut count = 0usize;
+            for chunk in samples.chunks_exact(2) {
+                let v = i16::from_le_bytes([chunk[0], chunk[1]]) as f32 / 32768.0;
+                sum += f64::from(v * v);
+                count += 1;
+            }
+            if count == 0 {
+                return Ok(0.0);
+            }
+            return Ok((sum / count as f64).sqrt() as f32);
+        }
+        i += 8 + size;
+    }
+    Ok(0.0)
+}
+
 /// Test recorder: returns scripted dB levels and never touches hardware.
 #[cfg(test)]
 pub struct FakeMic {
     levels: std::cell::RefCell<std::collections::VecDeque<f32>>,
+    rms_levels: std::cell::RefCell<std::collections::VecDeque<f32>>,
 }
 
 #[cfg(test)]
 impl FakeMic {
     pub fn new(levels: Vec<f32>) -> Self {
+        Self::with_rms(levels, vec![0.001])
+    }
+
+    pub fn with_rms(db_levels: Vec<f32>, rms_levels: Vec<f32>) -> Self {
+        Self {
+            levels: std::cell::RefCell::new(db_levels.into()),
+            rms_levels: std::cell::RefCell::new(rms_levels.into()),
+        }
+    }
+}
+
+#[cfg(test)]
+impl MicLevelSampler for FakeMic {
+    fn sample_rms(&self, _duration_seconds: f32) -> Result<f32> {
+        Ok(self
+            .rms_levels
+            .borrow_mut()
+            .pop_front()
+            .unwrap_or(0.001))
+    }
+}
+
+/// Scripted RMS values for presence tests.
+#[cfg(test)]
+pub struct ScriptedMicSampler {
+    levels: std::cell::RefCell<std::collections::VecDeque<f32>>,
+}
+
+#[cfg(test)]
+impl ScriptedMicSampler {
+    pub fn new(levels: Vec<f32>) -> Self {
         Self {
             levels: std::cell::RefCell::new(levels.into()),
         }
+    }
+}
+
+#[cfg(test)]
+impl MicLevelSampler for ScriptedMicSampler {
+    fn sample_rms(&self, _duration_seconds: f32) -> Result<f32> {
+        Ok(self.levels.borrow_mut().pop_front().unwrap_or(0.0))
     }
 }
 

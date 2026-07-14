@@ -11,12 +11,28 @@ use std::path::Path;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceConfig {
-    /// Host/IP to ping (the OnePlus 9 Pro).
+    /// Legacy ping target (kept for config compatibility; ARP is primary).
+    #[serde(default)]
     pub target: String,
-    /// Ping timeout in milliseconds.
+    /// MAC or OUI prefix of the phone (e.g. "9C:93:4E").
+    #[serde(default)]
+    pub phone_mac_prefix: String,
+    /// Optional: require this Wi-Fi SSID (empty = any).
+    #[serde(default)]
+    pub wlan_ssid: String,
+    /// Ping timeout in milliseconds (legacy fallback).
+    #[serde(default = "default_ping_timeout")]
     pub ping_timeout_ms: u32,
     /// Seconds to wait between presence checks in the continuous loop.
     pub check_interval_s: u64,
+}
+
+fn default_ping_timeout() -> u32 {
+    2000
+}
+
+fn default_rms_threshold() -> f32 {
+    0.01
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,6 +45,9 @@ pub struct MicConfig {
     pub response_cooldown_s: u64,
     /// Level (dB) above which a listening chunk counts as a "response".
     pub speech_threshold_db: f32,
+    /// Linear RMS threshold for presence (Python `PRESENCE_MIC_THRESH`, default 0.01).
+    #[serde(default = "default_rms_threshold")]
+    pub rms_threshold: f32,
     /// Length of each listening chunk.
     pub chunk_seconds: u32,
 }
@@ -82,6 +101,17 @@ impl Config {
                 self.device.target = v;
             }
         }
+        if let Ok(v) = std::env::var("PRESENCE_PHONE_MAC") {
+            if !v.trim().is_empty() {
+                self.device.phone_mac_prefix = v;
+            }
+        }
+        if let Ok(v) = std::env::var("PRESENCE_WLAN_SSID") {
+            self.device.wlan_ssid = v;
+        }
+        if let Some(v) = env_parse::<f32>("PRESENCE_MIC_THRESH") {
+            self.mic.rms_threshold = v;
+        }
         if let Some(v) = env_parse::<u32>("PRESENCE_PING_TIMEOUT_MS") {
             self.device.ping_timeout_ms = v;
         }
@@ -108,8 +138,8 @@ impl Config {
     /// Basic sanity checks used by `self-check`.
     pub fn validate(&self) -> Vec<String> {
         let mut problems = Vec::new();
-        if self.device.target.trim().is_empty() {
-            problems.push("device.target is empty".to_string());
+        if self.device.phone_mac_prefix.trim().is_empty() && self.device.target.trim().is_empty() {
+            problems.push("device.phone_mac_prefix or device.target is required".to_string());
         }
         if self.device.check_interval_s == 0 {
             problems.push("device.check_interval_s must be > 0".to_string());
@@ -161,9 +191,10 @@ mod tests {
         let mut cfg = Config::from_json_str(SAMPLE).unwrap();
         assert!(cfg.validate().is_empty());
         cfg.device.target = "  ".to_string();
+        cfg.device.phone_mac_prefix = "  ".to_string();
         cfg.device.check_interval_s = 0;
         let problems = cfg.validate();
-        assert!(problems.iter().any(|p| p.contains("target")));
+        assert!(problems.iter().any(|p| p.contains("phone_mac_prefix")));
         assert!(problems.iter().any(|p| p.contains("check_interval_s")));
     }
 

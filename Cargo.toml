@@ -11,10 +11,10 @@ name = "presence-monitor"
 path = "src/main.rs"
 
 [dependencies]
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", default-features = false, features = ["derive", "std", "help", "usage", "error-context"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+time = { version = "0.3", features = ["serde", "formatting", "parsing", "std", "macros"] }
 anyhow = "1"
 
 [profile.release]

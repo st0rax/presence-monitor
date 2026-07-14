@@ -6,7 +6,9 @@
 //! value emits a transition. No debounce/hysteresis was present in the
 //! original, so none is added here (a single ping decides each cycle).
 
-use chrono::{DateTime, Utc};
+use time::OffsetDateTime;
+
+use crate::clock::rfc3339_now;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -66,17 +68,20 @@ impl PresenceState {
     /// Feed a new presence observation and compute the transition. The state
     /// is mutated (and `last_transition` stamped) for `Initial`/`Changed`;
     /// `Unchanged` leaves the state as-is.
-    pub fn observe(&mut self, present: bool, now: DateTime<Utc>) -> Transition {
+    pub fn observe(&mut self, present: bool, now: OffsetDateTime) -> Transition {
+        let stamp = now
+            .format(&time::format_description::well_known::Rfc3339)
+            .unwrap_or_else(|_| rfc3339_now());
         match self.present {
             None => {
                 self.present = Some(present);
-                self.last_transition = Some(now.to_rfc3339());
+                self.last_transition = Some(stamp);
                 Transition::Initial { present }
             }
             Some(prev) if prev == present => Transition::Unchanged { present },
             Some(prev) => {
                 self.present = Some(present);
-                self.last_transition = Some(now.to_rfc3339());
+                self.last_transition = Some(stamp);
                 Transition::Changed {
                     from: prev,
                     to: present,
@@ -90,8 +95,8 @@ impl PresenceState {
 mod tests {
     use super::*;
 
-    fn t0() -> DateTime<Utc> {
-        Utc::now()
+    fn t0() -> OffsetDateTime {
+        crate::clock::now_utc()
     }
 
     #[test]

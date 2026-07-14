@@ -4,10 +4,13 @@
 //! recording, greets on arrival via TTS, and enters a panic announcement if
 //! no spoken response is heard within the timeout.
 
+mod arp;
+mod clock;
 mod config;
 mod mic;
 mod monitor;
 mod ping;
+mod presence;
 mod state;
 mod tts;
 
@@ -17,9 +20,9 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use config::Config;
+use arp::SystemArp;
 use mic::{FfmpegMic, MicRecorder};
 use monitor::{process_cycle, FileLogger, Logger, Paths};
-use ping::SystemPing;
 use state::PresenceState;
 use tts::{TtsEngine, WindowsSapiTts};
 
@@ -133,12 +136,19 @@ fn cmd_self_check(config_path: &Path) -> Result<()> {
     }
 
     println!(
-        "  device      : target={} interval={}s timeout={}ms",
-        cfg.device.target, cfg.device.check_interval_s, cfg.device.ping_timeout_ms
+        "  device      : mac_prefix={} wlan_ssid={} interval={}s",
+        cfg.device.phone_mac_prefix,
+        if cfg.device.wlan_ssid.is_empty() {
+            "(any)".to_string()
+        } else {
+            cfg.device.wlan_ssid.clone()
+        },
+        cfg.device.check_interval_s
     );
     println!(
-        "  mic         : verify={}s threshold={}dB chunk={}s response_timeout={}s",
+        "  mic         : verify={}s rms_thresh={} speech={}dB chunk={}s response_timeout={}s",
         cfg.mic.verify_seconds,
+        cfg.mic.rms_threshold,
         cfg.mic.speech_threshold_db,
         cfg.mic.chunk_seconds,
         cfg.mic.response_timeout_s
@@ -148,11 +158,11 @@ fn cmd_self_check(config_path: &Path) -> Result<()> {
     let root = root_for(config_path);
     let ffmpeg = FfmpegMic::discover(&root);
     println!(
-        "  ping backend: system `ping` ({})",
+        "  phone backend: ARP table (`arp -a`) {}",
         if cfg!(windows) {
-            "windows -n/-w"
+            "windows"
         } else {
-            "unix -c/-W"
+            "fallback (no ARP on this OS)"
         }
     );
     println!(
@@ -195,7 +205,7 @@ fn cmd_self_test(config_path: &Path) -> Result<()> {
     }
     let device = mic.default_device()?;
     logger.log(&format!("Mikrofon: {device}"));
-    let stamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+    let stamp = clock::file_stamp();
     let wav = paths.audio_dir.join(format!("verify_{stamp}.wav"));
     let res = mic.record_clip(3, &wav)?;
     logger.log(&format!(
@@ -223,7 +233,7 @@ fn cmd_run(config_path: &Path, once: bool) -> Result<()> {
     paths.ensure_dirs()?;
     let logger = FileLogger::new(paths.main_log.clone());
 
-    let probe = SystemPing;
+    let phone = SystemArp;
     let mic = FfmpegMic::discover(&root);
     let tts = WindowsSapiTts;
     let mut state = PresenceState::load(&paths.state_file);
@@ -233,7 +243,7 @@ fn cmd_run(config_path: &Path, once: bool) -> Result<()> {
     }
 
     let run_cycle = |state: &mut PresenceState| -> Result<()> {
-        process_cycle(&probe, &mic, &tts, &cfg, state, &paths, &logger)
+        process_cycle(&phone, &mic, &mic, &tts, &cfg, state, &paths, &logger)
     };
 
     if once {

@@ -5,13 +5,14 @@
 //! be exercised in tests with fakes. This mirrors `Process-Cycle` from the
 //! PowerShell original.
 
+use crate::arp::PhoneProbe;
 use crate::config::Config;
-use crate::mic::MicRecorder;
-use crate::ping::PresenceProbe;
+use crate::mic::{MicLevelSampler, MicRecorder};
+use crate::presence::check_presence;
 use crate::state::{PresenceState, Transition};
 use crate::tts::TtsEngine;
 use anyhow::Result;
-use chrono::Utc;
+use crate::clock::{file_stamp, log_timestamp, now_utc, rfc3339_now};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -67,7 +68,7 @@ impl FileLogger {
 
 impl Logger for FileLogger {
     fn log(&self, msg: &str) {
-        let ts = Utc::now().format("%Y-%m-%dT%H:%M:%S");
+        let ts = log_timestamp();
         let line = format!("{ts} {msg}");
         println!("{line}");
         use std::io::Write;
@@ -102,7 +103,7 @@ pub fn wait_for_response<M: MicRecorder + ?Sized>(
     let chunk = cfg.mic.chunk_seconds.max(1);
     let mut elapsed = 0u32;
     while elapsed < cfg.mic.response_timeout_s {
-        let stamp = Utc::now().format("%Y%m%d_%H%M%S%3f");
+        let stamp = file_stamp();
         let clip = audio_dir.join(format!("resp_{stamp}.wav"));
         let res = mic.record_clip(chunk, &clip)?;
         if res.max_db > cfg.mic.speech_threshold_db {
@@ -128,7 +129,7 @@ pub fn handle_arrival<M: MicRecorder + ?Sized, T: TtsEngine + ?Sized>(
     audio_dir: &Path,
     logger: &dyn Logger,
 ) -> Result<ArrivalOutcome> {
-    let greeting_wav = audio_dir.join(format!("tts_{}.wav", Utc::now().format("%Y%m%d_%H%M%S%3f")));
+    let greeting_wav = audio_dir.join(format!("tts_{}.wav", file_stamp()));
     tts.speak(
         &cfg.tts.greeting_text,
         &cfg.tts.greeting_language,
@@ -150,7 +151,7 @@ pub fn handle_arrival<M: MicRecorder + ?Sized, T: TtsEngine + ?Sized>(
         Ok(ArrivalOutcome::Answered)
     } else {
         let panic_wav =
-            audio_dir.join(format!("tts_{}.wav", Utc::now().format("%Y%m%d_%H%M%S%3f")));
+            audio_dir.join(format!("tts_{}.wav", file_stamp()));
         tts.speak(&cfg.tts.panic_text, &cfg.tts.panic_language, &panic_wav)?;
         logger.log(&format!("PANICMODE: {}", panic_wav.display()));
         Ok(ArrivalOutcome::Panic)
@@ -165,11 +166,11 @@ fn record_verify_clip<M: MicRecorder + ?Sized>(
     paths: &Paths,
     logger: &dyn Logger,
 ) -> Result<()> {
-    let stamp = Utc::now().format("%Y%m%d_%H%M%S%3f").to_string();
+    let stamp = file_stamp();
     let wav = paths.audio_dir.join(format!("verify_{stamp}.wav"));
     let res = mic.record_clip(cfg.mic.verify_seconds, &wav)?;
     let meta = serde_json::json!({
-        "timestamp": Utc::now().to_rfc3339(),
+        "timestamp": rfc3339_now(),
         "type": "verify",
         "audioFile": wav.to_string_lossy(),
         "maxDb": (res.max_db * 100.0).round() / 100.0,
@@ -185,9 +186,10 @@ fn record_verify_clip<M: MicRecorder + ?Sized>(
     Ok(())
 }
 
-/// Run one full presence cycle: ping, update state, and act on transitions.
+/// Run one full presence cycle: ARP phone + mic RMS, update state, act on transitions.
 pub fn process_cycle<P, M, T>(
-    probe: &P,
+    phone: &P,
+    mic_sampler: &M,
     mic: &M,
     tts: &T,
     cfg: &Config,
@@ -196,14 +198,25 @@ pub fn process_cycle<P, M, T>(
     logger: &dyn Logger,
 ) -> Result<()>
 where
-    P: PresenceProbe + ?Sized,
-    M: MicRecorder + ?Sized,
+    P: PhoneProbe + ?Sized,
+    M: MicLevelSampler + MicRecorder + ?Sized,
     T: TtsEngine + ?Sized,
 {
-    let present = probe.is_present(&cfg.device.target, cfg.device.ping_timeout_ms);
-    let tr = state.observe(present, Utc::now());
+    let verdict = check_presence(
+        phone,
+        mic_sampler,
+        &cfg.device.phone_mac_prefix,
+        &cfg.device.wlan_ssid,
+        cfg.mic.rms_threshold,
+        1.0,
+    );
+    let present = verdict.present;
+    let tr = state.observe(present, now_utc());
     let state_now = if present { "present" } else { "absent" };
-    logger.log(&format!("ping {} -> {}", cfg.device.target, state_now));
+    logger.log(&format!(
+        "presence phone={} voice={} rms={:.4} -> {}",
+        verdict.phone_present, verdict.voice_detected, verdict.mic_rms, state_now
+    ));
 
     match tr {
         Transition::Initial { .. } => {
@@ -228,8 +241,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::arp::ScriptedPhoneProbe;
     use crate::mic::FakeMic;
-    use crate::ping::ScriptedProbe;
     use crate::tts::RecordingTts;
     use std::cell::RefCell;
 
@@ -335,18 +348,21 @@ mod tests {
         let logger = MemLogger::new();
         let tts = RecordingTts::default();
 
-        // First ping absent -> initial (no verify, no tts).
-        let probe = ScriptedProbe::new(vec![false]);
-        let mic = FakeMic::new(vec![]);
+        // First cycle absent -> initial (no verify, no tts).
+        let phone = ScriptedPhoneProbe::new(false);
+        let mic = FakeMic::with_rms(vec![], vec![0.001]);
         let mut state = PresenceState::new();
-        process_cycle(&probe, &mic, &tts, &cfg, &mut state, &paths, &logger).unwrap();
+        process_cycle(&phone, &mic, &mic, &tts, &cfg, &mut state, &paths, &logger).unwrap();
         assert_eq!(state.present, Some(false));
         assert!(tts.spoken.borrow().is_empty());
 
-        // Next ping present -> arrival: 1 verify clip + greeting + loud resp.
-        let probe = ScriptedProbe::new(vec![true]);
-        let mic = FakeMic::new(vec![-30.0 /*verify*/, -5.0 /*resp loud*/]);
-        process_cycle(&probe, &mic, &tts, &cfg, &mut state, &paths, &logger).unwrap();
+        // Next cycle present (phone) -> arrival: verify + greeting + loud resp.
+        let phone = ScriptedPhoneProbe::new(true);
+        let mic = FakeMic::with_rms(
+            vec![-30.0 /*verify*/, -5.0 /*resp loud*/],
+            vec![0.001],
+        );
+        process_cycle(&phone, &mic, &mic, &tts, &cfg, &mut state, &paths, &logger).unwrap();
         assert_eq!(state.present, Some(true));
         assert_eq!(tts.spoken.borrow().len(), 1); // greeting only, answered
         assert!(logger.joined().contains("UEBERGANG absent -> present"));

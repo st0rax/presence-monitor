@@ -1,8 +1,9 @@
 # presence-monitor
 
 Eigenständiger Präsenz-Monitor für den Rechner von **storax**.
-Präsenz wird primär über die Netzwerk-Erreichbarkeit des Smartphones
-**OnePlus 9 Pro** (`oneplus9pro.local`) festgestellt. Jeder Statuswechsel
+Präsenz wird über **ARP-MAC** (OnePlus 9 Pro in `arp -a`) und **Mikrofon-RMS**
+festgestellt — siehe `device.phone_mac_prefix` und `mic.rms_threshold` (default
+`0.01`, Env `PRESENCE_MIC_THRESH`). Jeder Statuswechsel
 (anwesend ⇄ abwesend) wird zusätzlich über das Mikrofon verifiziert, wobei
 ein 30-Sekunden-Mitschnitt gespeichert wird. Bei der Rückkehr (abwesend →
 anwesend) erfolgt eine hörbare TTS-Begrüßung; bleibt diese 5 Minuten
@@ -28,9 +29,9 @@ bleibt als Fallback.
 
 ## Funktionsweise
 
-1. **Ping** alle `check_interval_s` Sekunden gegen `oneplus9pro.local`.
-   - erreichbar → `present` (storax ist zuhause)
-   - nicht erreichbar → `absent` (storax ist nicht zuhause)
+1. **Präsenz-Check** alle `check_interval_s` Sekunden (ARP + Mic-RMS).
+   - present → storax ist zuhause
+   - absent → storax ist nicht zuhause
 2. Bei jedem **Übergang** wird ein **30-Sekunden-Mitschnitt** des Mikrofons
    aufgezeichnet und als WAV gespeichert (Verifikation der Erkennung).
 3. Bei Übergang **absent → present**:

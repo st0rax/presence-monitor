@@ -10,3 +10,6 @@ tools/ffmpeg-*-essentials_build/
 .DS_Store
 Thumbs.db
 *.tmp
+
+# Rust build artifacts
+/target/

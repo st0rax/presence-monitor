@@ -1,0 +1,21 @@
+[package]
+name = "presence-monitor"
+version = "0.1.0"
+edition = "2021"
+description = "Ping-based presence monitor (OnePlus 9 Pro) with microphone verification, TTS greeting, and panic mode."
+license = "MIT"
+repository = "https://github.com/st0rax/presence-monitor"
+
+[[bin]]
+name = "presence-monitor"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+anyhow = "1"
+
+[profile.release]
+opt-level = 2

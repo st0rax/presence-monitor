@@ -13,7 +13,7 @@ mod tts;
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use config::Config;
@@ -82,7 +82,7 @@ fn resolve_config_path(explicit: Option<PathBuf>) -> Result<PathBuf> {
 
 /// The project root used for `tools/`, `logs/`, and `state.json` — the
 /// directory containing the config file.
-fn root_for(config_path: &PathBuf) -> PathBuf {
+fn root_for(config_path: &Path) -> PathBuf {
     config_path
         .parent()
         .filter(|p| !p.as_os_str().is_empty())
@@ -102,12 +102,12 @@ fn real_main() -> Result<()> {
     }
 }
 
-fn load_config(config_path: &PathBuf) -> Result<Config> {
+fn load_config(config_path: &Path) -> Result<Config> {
     Config::load(config_path)
         .with_context(|| format!("loading config from {}", config_path.display()))
 }
 
-fn cmd_self_check(config_path: &PathBuf) -> Result<()> {
+fn cmd_self_check(config_path: &Path) -> Result<()> {
     println!("presence-monitor self-check");
     println!("  config path : {}", config_path.display());
 
@@ -181,7 +181,7 @@ fn cmd_self_check(config_path: &PathBuf) -> Result<()> {
     }
 }
 
-fn cmd_self_test(config_path: &PathBuf) -> Result<()> {
+fn cmd_self_test(config_path: &Path) -> Result<()> {
     let cfg = load_config(config_path)?;
     let root = root_for(config_path);
     let paths = Paths::resolve(&root, &cfg);
@@ -216,7 +216,7 @@ fn cmd_self_test(config_path: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-fn cmd_run(config_path: &PathBuf, once: bool) -> Result<()> {
+fn cmd_run(config_path: &Path, once: bool) -> Result<()> {
     let cfg = load_config(config_path)?;
     let root = root_for(config_path);
     let paths = Paths::resolve(&root, &cfg);

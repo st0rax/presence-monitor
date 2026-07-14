@@ -39,7 +39,7 @@ fn build_ping_command(target: &str, timeout_ms: u32) -> Command {
             .arg(target);
     } else {
         // -c 1 : one echo request, -W : timeout in whole seconds
-        let secs = ((timeout_ms + 999) / 1000).max(1);
+        let secs = timeout_ms.div_ceil(1000).max(1);
         cmd.arg("-c")
             .arg("1")
             .arg("-W")

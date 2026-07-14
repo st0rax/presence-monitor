@@ -17,7 +17,7 @@ use std::time::Duration;
 
 /// Resolved filesystem layout (mirrors the PowerShell paths).
 pub struct Paths {
-    pub root: PathBuf,
+    pub _root: PathBuf,
     pub log_dir: PathBuf,
     pub audio_dir: PathBuf,
     pub transition_dir: PathBuf,
@@ -36,7 +36,7 @@ impl Paths {
             log_dir,
             audio_dir,
             transition_dir,
-            root: root.to_path_buf(),
+            _root: root.to_path_buf(),
         }
     }
 

@@ -132,8 +132,10 @@ fn cmd_self_check(config_path: &PathBuf) -> Result<()> {
         }
     }
 
-    println!("  device      : target={} interval={}s timeout={}ms",
-        cfg.device.target, cfg.device.check_interval_s, cfg.device.ping_timeout_ms);
+    println!(
+        "  device      : target={} interval={}s timeout={}ms",
+        cfg.device.target, cfg.device.check_interval_s, cfg.device.ping_timeout_ms
+    );
     println!(
         "  mic         : verify={}s threshold={}dB chunk={}s response_timeout={}s",
         cfg.mic.verify_seconds,
@@ -147,7 +149,11 @@ fn cmd_self_check(config_path: &PathBuf) -> Result<()> {
     let ffmpeg = FfmpegMic::discover(&root);
     println!(
         "  ping backend: system `ping` ({})",
-        if cfg!(windows) { "windows -n/-w" } else { "unix -c/-W" }
+        if cfg!(windows) {
+            "windows -n/-w"
+        } else {
+            "unix -c/-W"
+        }
     );
     println!(
         "  mic backend : ffmpeg {}",
@@ -192,11 +198,19 @@ fn cmd_self_test(config_path: &PathBuf) -> Result<()> {
     let stamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
     let wav = paths.audio_dir.join(format!("verify_{stamp}.wav"));
     let res = mic.record_clip(3, &wav)?;
-    logger.log(&format!("selftest clip: {} max={}dB", wav.display(), res.max_db));
+    logger.log(&format!(
+        "selftest clip: {} max={}dB",
+        wav.display(),
+        res.max_db
+    ));
 
     let tts = WindowsSapiTts;
     let greeting_wav = paths.audio_dir.join(format!("tts_{stamp}.wav"));
-    tts.speak(&cfg.tts.greeting_text, &cfg.tts.greeting_language, &greeting_wav)?;
+    tts.speak(
+        &cfg.tts.greeting_text,
+        &cfg.tts.greeting_language,
+        &greeting_wav,
+    )?;
     logger.log(&format!("selftest greeting: {}", greeting_wav.display()));
     logger.log("SELFTEST ende");
     Ok(())

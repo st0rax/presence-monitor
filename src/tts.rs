@@ -23,9 +23,7 @@ pub struct WindowsSapiTts;
 
 impl WindowsSapiTts {
     fn powershell_available() -> bool {
-        which("powershell.exe")
-            .or_else(|| which("pwsh"))
-            .is_some()
+        which("powershell.exe").or_else(|| which("pwsh")).is_some()
     }
 
     /// Build the PowerShell script that saves a WAV and plays it aloud,
@@ -134,6 +132,9 @@ mod tests {
     fn recording_tts_captures_calls() {
         let tts = RecordingTts::default();
         tts.speak("hi", "en-US", Path::new("x")).unwrap();
-        assert_eq!(tts.spoken.borrow()[0], ("en-US".to_string(), "hi".to_string()));
+        assert_eq!(
+            tts.spoken.borrow()[0],
+            ("en-US".to_string(), "hi".to_string())
+        );
     }
 }

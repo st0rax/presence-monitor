@@ -125,7 +125,9 @@ impl Config {
 }
 
 fn env_parse<T: std::str::FromStr>(key: &str) -> Option<T> {
-    std::env::var(key).ok().and_then(|v| v.trim().parse::<T>().ok())
+    std::env::var(key)
+        .ok()
+        .and_then(|v| v.trim().parse::<T>().ok())
 }
 
 #[cfg(test)]

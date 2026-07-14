@@ -35,7 +35,11 @@ pub struct FfmpegMic {
 impl FfmpegMic {
     /// Discover ffmpeg under `<root>/tools/**/ffmpeg(.exe)` or on PATH.
     pub fn discover(root: &Path) -> Self {
-        let bin = if cfg!(windows) { "ffmpeg.exe" } else { "ffmpeg" };
+        let bin = if cfg!(windows) {
+            "ffmpeg.exe"
+        } else {
+            "ffmpeg"
+        };
         let found = find_ffmpeg(&root.join("tools"), bin).or_else(|| which_on_path(bin));
         Self { ffmpeg: found }
     }
@@ -222,6 +226,8 @@ mod tests {
     fn fake_mic_replays_levels() {
         let mic = FakeMic::new(vec![-5.0, -60.0]);
         assert!((mic.record_clip(2, Path::new("x")).unwrap().max_db - (-5.0)).abs() < f32::EPSILON);
-        assert!((mic.record_clip(2, Path::new("x")).unwrap().max_db - (-60.0)).abs() < f32::EPSILON);
+        assert!(
+            (mic.record_clip(2, Path::new("x")).unwrap().max_db - (-60.0)).abs() < f32::EPSILON
+        );
     }
 }

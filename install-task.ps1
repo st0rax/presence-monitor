@@ -9,10 +9,10 @@ param()
 # Deinstallation:  Unregister-ScheduledTask -TaskName 'PresenceMonitor' -Confirm:$false
 
 $ErrorActionPreference = 'Stop'
-$script = Join-Path $PSScriptRoot 'presence_monitor.ps1'
+$launcher = Join-Path $PSScriptRoot 'start-monitor.ps1'
 
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument (
-    "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$script`""
+    "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launcher`""
 )
 $trigger = New-ScheduledTaskTrigger -AtLogOn
 $settings = New-ScheduledTaskSettingsSet `

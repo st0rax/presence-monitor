@@ -13,3 +13,4 @@ Thumbs.db
 
 # Rust build artifacts
 /target/
+presence-monitor.exe

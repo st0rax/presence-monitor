@@ -22,8 +22,9 @@ cargo build --release   # → target/release/presence-monitor.exe
 ```
 
 CLI: `presence-monitor run` (Dauerbetrieb), `presence-monitor run --once`,
-`presence-monitor self-check`. Die PowerShell-Version (`presence_monitor.ps1`)
-bleibt bis zum Tag `v2.0.0` parallel nutzbar.
+`presence-monitor self-check`. **Produktion (storax):** Rust-Build via Release
+`v2.0.0`, Autostart über `start-monitor.ps1`. PowerShell (`presence_monitor.ps1`)
+bleibt als Fallback.
 
 ## Funktionsweise
 
@@ -76,12 +77,12 @@ powershell -ExecutionPolicy Bypass -File presence_monitor.ps1 -SelfTest
 
 Damit der Monitor auch ohne offene Session **laufend** protokolliert:
 
-- **Einfach (ohne Admin):** ein Eintrag unter
-  `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` startet das Skript bei
-  jeder Anmeldung im Hintergrund. Ist bereits eingerichtet:
+- **Einfach (ohne Admin):** HKCU-Run startet `start-monitor.ps1` bei Anmeldung
+  (Rust-Binary). Ist eingerichtet auf diesem Rechner:
   ```
-  reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v PresenceMonitor /t REG_SZ /d "powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\Users\storax\Desktop\presence-monitor\presence_monitor.ps1" /f
+  powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\Users\storax\Desktop\presence-monitor\start-monitor.ps1
   ```
+  Manuell starten: `powershell -ExecutionPolicy Bypass -File start-monitor.ps1`
   Entfernen: `reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v PresenceMonitor /f`
 
 - **Robust (mit Auto-Neustart, benötigt Admin):** `install-task.ps1` legt eine

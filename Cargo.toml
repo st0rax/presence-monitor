@@ -1,6 +1,6 @@
 [package]
 name = "presence-monitor"
-version = "0.1.0"
+version = "2.1.0"
 edition = "2021"
 description = "Ping-based presence monitor (OnePlus 9 Pro) with microphone verification, TTS greeting, and panic mode."
 license = "MIT"

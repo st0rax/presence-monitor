@@ -12,6 +12,19 @@ Zustand per TTS.
 Dieses Projekt ist **völlig eigenständig** und steht in keiner Verbindung zu
 anderen Projekten (z. B. webagent/webagent-rs).
 
+## Rust-Port (v2)
+
+Ab `feat/rust-port` gibt es einen nativen Rust-Build (`presence-monitor.exe`),
+der die PowerShell-Logik ersetzt. Build:
+
+```bash
+cargo build --release   # → target/release/presence-monitor.exe
+```
+
+CLI: `presence-monitor run` (Dauerbetrieb), `presence-monitor run --once`,
+`presence-monitor self-check`. Die PowerShell-Version (`presence_monitor.ps1`)
+bleibt bis zum Tag `v2.0.0` parallel nutzbar.
+
 ## Funktionsweise
 
 1. **Ping** alle `check_interval_s` Sekunden gegen `oneplus9pro.local`.

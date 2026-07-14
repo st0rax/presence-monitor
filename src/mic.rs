@@ -9,6 +9,11 @@ use anyhow::{anyhow, Context, Result};
 use std::path::Path;
 use std::process::Command;
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 /// A recorded clip plus its measured peak level.
 #[derive(Debug, Clone)]
 pub struct ClipResult {
@@ -97,16 +102,19 @@ impl MicRecorder for FfmpegMic {
 
     fn default_device(&self) -> Result<String> {
         let ffmpeg = self.ffmpeg_path()?;
-        let out = Command::new(ffmpeg)
-            .args([
-                "-hide_banner",
-                "-list_devices",
-                "true",
-                "-f",
-                "dshow",
-                "-i",
-                "dummy",
-            ])
+        let mut cmd = Command::new(ffmpeg);
+        cmd.args([
+            "-hide_banner",
+            "-list_devices",
+            "true",
+            "-f",
+            "dshow",
+            "-i",
+            "dummy",
+        ]);
+        #[cfg(windows)]
+        cmd.creation_flags(CREATE_NO_WINDOW);
+        let out = cmd
             .output()
             .context("failed to run ffmpeg -list_devices")?;
         let text = String::from_utf8_lossy(&out.stderr);
@@ -127,34 +135,40 @@ impl MicRecorder for FfmpegMic {
         let ffmpeg = self.ffmpeg_path()?;
         let device = self.default_device()?;
         // Record the clip.
-        let status = Command::new(ffmpeg)
-            .args([
-                "-y",
-                "-hide_banner",
-                "-loglevel",
-                "error",
-                "-f",
-                "dshow",
-                "-i",
-                &format!("audio={device}"),
-                "-t",
-                &seconds.to_string(),
-                "-ac",
-                "1",
-                "-ar",
-                "16000",
-            ])
-            .arg(out_file)
+        let mut cmd = Command::new(ffmpeg);
+        cmd.args([
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "dshow",
+            "-i",
+            &format!("audio={device}"),
+            "-t",
+            &seconds.to_string(),
+            "-ac",
+            "1",
+            "-ar",
+            "16000",
+        ])
+        .arg(out_file);
+        #[cfg(windows)]
+        cmd.creation_flags(CREATE_NO_WINDOW);
+        let status = cmd
             .status()
             .context("failed to run ffmpeg record")?;
         if !status.success() || !out_file.exists() {
             return Err(anyhow!("recording failed: {}", out_file.display()));
         }
         // Measure peak level via volumedetect.
-        let out = Command::new(ffmpeg)
-            .args(["-hide_banner", "-i"])
+        let mut cmd = Command::new(ffmpeg);
+        cmd.args(["-hide_banner", "-i"])
             .arg(out_file)
-            .args(["-af", "volumedetect", "-f", "null", "-"])
+            .args(["-af", "volumedetect", "-f", "null", "-"]);
+        #[cfg(windows)]
+        cmd.creation_flags(CREATE_NO_WINDOW);
+        let out = cmd
             .output()
             .context("failed to run ffmpeg volumedetect")?;
         let text = String::from_utf8_lossy(&out.stderr);

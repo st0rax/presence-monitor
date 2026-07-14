@@ -25,7 +25,9 @@ cargo build --release   # → target/release/presence-monitor.exe
 CLI: `presence-monitor run` (Dauerbetrieb), `presence-monitor run --once`,
 `presence-monitor self-check`. **Produktion (storax):** Rust-Build via Release
 `v2.0.0`, Autostart über `start-monitor.ps1`. PowerShell (`presence_monitor.ps1`)
-bleibt als Fallback.
+bleibt als Fallback (nicht empfohlen).
+
+**Deprecated:** Die Python-Referenz `presence/presence_check.py` (bzw. `Desktop/presence/presence_check.py`) wird nicht mehr gepflegt und ist als Fallback obsolet. Der Rust-Build (`presence-monitor.exe`) ist der primäre und einzige unterstützte Implementierung.
 
 ## Funktionsweise
 

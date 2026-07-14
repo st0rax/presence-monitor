@@ -9,6 +9,11 @@ use anyhow::{Context, Result};
 use std::path::Path;
 use std::process::Command;
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 /// Abstraction over speaking a phrase aloud (and saving it to a WAV).
 pub trait TtsEngine {
     /// Speak `text` in `lang` (culture prefix like `fr-FR`) and also write a
@@ -62,8 +67,11 @@ impl TtsEngine for WindowsSapiTts {
             .or_else(|| which("pwsh"))
             .map(|p| p.to_string_lossy().into_owned())
             .unwrap_or_else(|| "powershell.exe".to_string());
-        let status = Command::new(shell)
-            .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+        let mut cmd = Command::new(shell);
+        cmd.args(["-NoProfile", "-NonInteractive", "-Command", &script]);
+        #[cfg(windows)]
+        cmd.creation_flags(CREATE_NO_WINDOW);
+        let status = cmd
             .status()
             .context("failed to run PowerShell for TTS")?;
         if !status.success() {

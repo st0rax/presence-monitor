@@ -5,6 +5,11 @@
 
 use std::process::Command;
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 /// Detect whether the user's phone is on the local network.
 pub trait PhoneProbe {
     /// Returns true when a MAC in the ARP table starts with `mac_prefix`.
@@ -54,7 +59,10 @@ fn is_mac_token(token: &str) -> bool {
 fn arp_macs() -> Vec<String> {
     #[cfg(windows)]
     {
-        match Command::new("arp").arg("-a").output() {
+        let mut cmd = Command::new("arp");
+        cmd.arg("-a");
+        cmd.creation_flags(CREATE_NO_WINDOW);
+        match cmd.output() {
             Ok(out) if out.status.success() => {
                 parse_arp_output(&String::from_utf8_lossy(&out.stdout))
             }
@@ -71,10 +79,10 @@ fn arp_macs() -> Vec<String> {
 pub fn wlan_ssid() -> String {
     #[cfg(windows)]
     {
-        match Command::new("netsh")
-            .args(["wlan", "show", "interfaces"])
-            .output()
-        {
+        let mut cmd = Command::new("netsh");
+        cmd.args(["wlan", "show", "interfaces"]);
+        cmd.creation_flags(CREATE_NO_WINDOW);
+        match cmd.output() {
             Ok(out) if out.status.success() => {
                 let text = String::from_utf8_lossy(&out.stdout);
                 for line in text.lines() {

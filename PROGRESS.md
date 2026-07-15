@@ -4,3 +4,5 @@
 - [x] Python fallback deprecated in README
 - [x] cargo test x2 green (29 passed)
 - [x] cargo build --release ok
+## updated
+- [x] presence-run.log captured; verif2 populated

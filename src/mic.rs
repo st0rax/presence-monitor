@@ -114,9 +114,7 @@ impl MicRecorder for FfmpegMic {
         ]);
         #[cfg(windows)]
         cmd.creation_flags(CREATE_NO_WINDOW);
-        let out = cmd
-            .output()
-            .context("failed to run ffmpeg -list_devices")?;
+        let out = cmd.output().context("failed to run ffmpeg -list_devices")?;
         let text = String::from_utf8_lossy(&out.stderr);
         for line in text.lines() {
             // Lines look like:  "Microphone (Realtek)" (audio)
@@ -155,22 +153,22 @@ impl MicRecorder for FfmpegMic {
         .arg(out_file);
         #[cfg(windows)]
         cmd.creation_flags(CREATE_NO_WINDOW);
-        let status = cmd
-            .status()
-            .context("failed to run ffmpeg record")?;
+        let status = cmd.status().context("failed to run ffmpeg record")?;
         if !status.success() || !out_file.exists() {
             return Err(anyhow!("recording failed: {}", out_file.display()));
         }
         // Measure peak level via volumedetect.
         let mut cmd = Command::new(ffmpeg);
-        cmd.args(["-hide_banner", "-i"])
-            .arg(out_file)
-            .args(["-af", "volumedetect", "-f", "null", "-"]);
+        cmd.args(["-hide_banner", "-i"]).arg(out_file).args([
+            "-af",
+            "volumedetect",
+            "-f",
+            "null",
+            "-",
+        ]);
         #[cfg(windows)]
         cmd.creation_flags(CREATE_NO_WINDOW);
-        let out = cmd
-            .output()
-            .context("failed to run ffmpeg volumedetect")?;
+        let out = cmd.output().context("failed to run ffmpeg volumedetect")?;
         let text = String::from_utf8_lossy(&out.stderr);
         Ok(ClipResult {
             max_db: Self::parse_max_db(&text),
@@ -268,11 +266,7 @@ impl FakeMic {
 #[cfg(test)]
 impl MicLevelSampler for FakeMic {
     fn sample_rms(&self, _duration_seconds: f32) -> Result<f32> {
-        Ok(self
-            .rms_levels
-            .borrow_mut()
-            .pop_front()
-            .unwrap_or(0.001))
+        Ok(self.rms_levels.borrow_mut().pop_front().unwrap_or(0.001))
     }
 }
 

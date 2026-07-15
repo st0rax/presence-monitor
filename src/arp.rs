@@ -31,9 +31,7 @@ impl PhoneProbe for SystemArp {
 
 /// Normalize MAC/OUI prefix to uppercase hyphen form (`9C-93-4E`).
 pub fn normalize_mac(mac: &str) -> String {
-    mac.trim()
-        .to_uppercase()
-        .replace(':', "-")
+    mac.trim().to_uppercase().replace(':', "-")
 }
 
 /// Parse MAC addresses from `arp -a` output.
@@ -51,9 +49,18 @@ pub fn parse_arp_output(text: &str) -> Vec<String> {
 
 fn is_mac_token(token: &str) -> bool {
     let t = token.trim();
-    let sep = if t.contains('-') { '-' } else if t.contains(':') { ':' } else { return false };
+    let sep = if t.contains('-') {
+        '-'
+    } else if t.contains(':') {
+        ':'
+    } else {
+        return false;
+    };
     let parts: Vec<&str> = t.split(sep).collect();
-    parts.len() == 6 && parts.iter().all(|p| p.len() == 2 && p.chars().all(|c| c.is_ascii_hexdigit()))
+    parts.len() == 6
+        && parts
+            .iter()
+            .all(|p| p.len() == 2 && p.chars().all(|c| c.is_ascii_hexdigit()))
 }
 
 fn arp_macs() -> Vec<String> {

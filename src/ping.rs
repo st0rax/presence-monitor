@@ -12,21 +12,14 @@ use std::os::windows::process::CommandExt;
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
-#[allow(dead_code)]
-mod _presence_ping_allow {
-    // Silence dead_code for SystemPing / build fn used only via trait in some builds/tests
-}
-
 /// Abstraction over presence detection so the monitor loop can be tested
 /// without touching the network.
-#[allow(dead_code)]
 pub trait PresenceProbe {
     /// Returns `true` when the target responds within the timeout.
     fn is_present(&self, target: &str, timeout_ms: u32) -> bool;
 }
 
 /// Real ICMP probe backed by the system `ping` command.
-#[allow(dead_code)]
 pub struct SystemPing;
 
 impl PresenceProbe for SystemPing {
@@ -40,7 +33,6 @@ impl PresenceProbe for SystemPing {
 }
 
 /// Build the platform-appropriate one-shot ping command.
-#[allow(dead_code)]
 fn build_ping_command(target: &str, timeout_ms: u32) -> Command {
     let mut cmd = Command::new("ping");
     if cfg!(windows) {
@@ -67,7 +59,6 @@ fn build_ping_command(target: &str, timeout_ms: u32) -> Command {
 
 /// A deterministic probe for tests: replays a fixed sequence of results.
 #[cfg(test)]
-#[allow(dead_code)]
 pub struct ScriptedProbe {
     results: std::cell::RefCell<std::collections::VecDeque<bool>>,
 }

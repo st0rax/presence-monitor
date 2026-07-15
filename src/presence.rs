@@ -3,7 +3,7 @@
 //! Logic matches `presence/presence_check.py`:
 //!   present = (phone_present && wlan_ok) || (mic_rms > threshold)
 
-use crate::arp::{PhoneProbe, wlan_ok};
+use crate::arp::{wlan_ok, PhoneProbe};
 use crate::mic::MicLevelSampler;
 
 /// Snapshot of one presence check (diagnostics / logging).

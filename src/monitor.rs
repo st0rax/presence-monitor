@@ -6,13 +6,14 @@
 //! PowerShell original.
 
 use crate::arp::PhoneProbe;
+use crate::clock::{file_stamp, log_timestamp, now_utc, rfc3339_now};
 use crate::config::Config;
 use crate::mic::{MicLevelSampler, MicRecorder};
+use crate::ping::PresenceProbe;
 use crate::presence::check_presence;
 use crate::state::{PresenceState, Transition};
 use crate::tts::TtsEngine;
 use anyhow::Result;
-use crate::clock::{file_stamp, log_timestamp, now_utc, rfc3339_now};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -150,8 +151,7 @@ pub fn handle_arrival<M: MicRecorder + ?Sized, T: TtsEngine + ?Sized>(
         logger.log("antwort erkannt (Storax hat geantwortet)");
         Ok(ArrivalOutcome::Answered)
     } else {
-        let panic_wav =
-            audio_dir.join(format!("tts_{}.wav", file_stamp()));
+        let panic_wav = audio_dir.join(format!("tts_{}.wav", file_stamp()));
         tts.speak(&cfg.tts.panic_text, &cfg.tts.panic_language, &panic_wav)?;
         logger.log(&format!("PANICMODE: {}", panic_wav.display()));
         Ok(ArrivalOutcome::Panic)
@@ -186,12 +186,25 @@ fn record_verify_clip<M: MicRecorder + ?Sized>(
     Ok(())
 }
 
+/// Die austauschbaren Aussenkanten eines Zyklus.
+///
+/// Als Struct statt acht Einzelparameter — aus zwei Gruenden, die dasselbe
+/// Problem sind: `clippy::too_many_arguments` schlug bei 8/7 an (und liess die CI
+/// rot), und der Ping war als einziger **kein** Seam. Er wurde in `process_cycle`
+/// hart als `SystemPing` instanziiert, obwohl `phone`/`mic`/`tts` alle injiziert
+/// sind — wodurch jeder Zyklus-Test echtes `ping.exe` ausschellte, waehrend das
+/// vorhandene `ScriptedProbe` ungenutzt blieb. Jetzt haengt er am selben Haken.
+pub struct Probes<'a, P: ?Sized, M: ?Sized, T: ?Sized> {
+    pub phone: &'a P,
+    pub mic_sampler: &'a M,
+    pub mic: &'a M,
+    pub tts: &'a T,
+    pub ping: &'a dyn PresenceProbe,
+}
+
 /// Run one full presence cycle: ARP phone + mic RMS, update state, act on transitions.
 pub fn process_cycle<P, M, T>(
-    phone: &P,
-    mic_sampler: &M,
-    mic: &M,
-    tts: &T,
+    probes: &Probes<'_, P, M, T>,
     cfg: &Config,
     state: &mut PresenceState,
     paths: &Paths,
@@ -202,13 +215,19 @@ where
     M: MicLevelSampler + MicRecorder + ?Sized,
     T: TtsEngine + ?Sized,
 {
-    // Integrate ping (legacy target) into shipped presence decision inside process_cycle.
-    // This makes the ping path (with creation_flags) affect the verdict/present for DoD.
-    let ping_target = if cfg.device.target.trim().is_empty() { "127.0.0.1".to_string() } else { cfg.device.target.clone() };
-    let ping_present = crate::ping::SystemPing.is_present(&ping_target, cfg.device.ping_timeout_ms);
+    let (mic, tts) = (probes.mic, probes.tts);
+    // Ping fliesst zusaetzlich zu ARP/Mic in das Urteil ein (Legacy-Target).
+    let ping_target = if cfg.device.target.trim().is_empty() {
+        "127.0.0.1".to_string()
+    } else {
+        cfg.device.target.clone()
+    };
+    let ping_present = probes
+        .ping
+        .is_present(&ping_target, cfg.device.ping_timeout_ms);
     let verdict = check_presence(
-        phone,
-        mic_sampler,
+        probes.phone,
+        probes.mic_sampler,
         &cfg.device.phone_mac_prefix,
         &cfg.device.wlan_ssid,
         cfg.mic.rms_threshold,
@@ -217,9 +236,11 @@ where
     let present = verdict.present || ping_present;
     let tr = state.observe(present, now_utc());
     let state_now = if present { "present" } else { "absent" };
+    // ping mitloggen: er geht ins Urteil ein, fehlte aber in der Zeile — ein nur
+    // per Ping anwesender Rechner loggte "phone=false voice=false -> present".
     logger.log(&format!(
-        "presence phone={} voice={} rms={:.4} -> {}",
-        verdict.phone_present, verdict.voice_detected, verdict.mic_rms, state_now
+        "presence phone={} voice={} rms={:.4} ping={} -> {}",
+        verdict.phone_present, verdict.voice_detected, verdict.mic_rms, ping_present, state_now
     ));
 
     match tr {
@@ -247,6 +268,7 @@ mod tests {
     use super::*;
     use crate::arp::ScriptedPhoneProbe;
     use crate::mic::FakeMic;
+    use crate::ping::ScriptedProbe;
     use crate::tts::RecordingTts;
     use std::cell::RefCell;
 
@@ -352,24 +374,54 @@ mod tests {
         let logger = MemLogger::new();
         let tts = RecordingTts::default();
 
+        // Ping deterministisch abwesend (leere Sequenz => immer false): vorher
+        // shellte dieser Test bei jedem Lauf echtes ping.exe aus — und haette gegen
+        // das 127.0.0.1-Fallback-Target immer "present" gemeldet.
+        let ping = ScriptedProbe::new(vec![]);
+
         // First cycle absent -> initial (no verify, no tts).
         let phone = ScriptedPhoneProbe::new(false);
         let mic = FakeMic::with_rms(vec![], vec![0.001]);
         let mut state = PresenceState::new();
-        process_cycle(&phone, &mic, &mic, &tts, &cfg, &mut state, &paths, &logger).unwrap();
+        process_cycle(
+            &Probes {
+                phone: &phone,
+                mic_sampler: &mic,
+                mic: &mic,
+                tts: &tts,
+                ping: &ping,
+            },
+            &cfg,
+            &mut state,
+            &paths,
+            &logger,
+        )
+        .unwrap();
         assert_eq!(state.present, Some(false));
         assert!(tts.spoken.borrow().is_empty());
 
         // Next cycle present (phone) -> arrival: verify + greeting + loud resp.
         let phone = ScriptedPhoneProbe::new(true);
-        let mic = FakeMic::with_rms(
-            vec![-30.0 /*verify*/, -5.0 /*resp loud*/],
-            vec![0.001],
-        );
-        process_cycle(&phone, &mic, &mic, &tts, &cfg, &mut state, &paths, &logger).unwrap();
+        let mic = FakeMic::with_rms(vec![-30.0 /*verify*/, -5.0 /*resp loud*/], vec![0.001]);
+        process_cycle(
+            &Probes {
+                phone: &phone,
+                mic_sampler: &mic,
+                mic: &mic,
+                tts: &tts,
+                ping: &ping,
+            },
+            &cfg,
+            &mut state,
+            &paths,
+            &logger,
+        )
+        .unwrap();
         assert_eq!(state.present, Some(true));
         assert_eq!(tts.spoken.borrow().len(), 1); // greeting only, answered
         assert!(logger.joined().contains("UEBERGANG absent -> present"));
+        // Der Ping steht jetzt in der Zeile — vorher log "phone=.. voice=.." ohne ihn.
+        assert!(logger.joined().contains("ping=false"));
 
         // A verify JSON was written.
         let n_json = std::fs::read_dir(&paths.transition_dir).unwrap().count();

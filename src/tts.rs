@@ -71,9 +71,7 @@ impl TtsEngine for WindowsSapiTts {
         cmd.args(["-NoProfile", "-NonInteractive", "-Command", &script]);
         #[cfg(windows)]
         cmd.creation_flags(CREATE_NO_WINDOW);
-        let status = cmd
-            .status()
-            .context("failed to run PowerShell for TTS")?;
+        let status = cmd.status().context("failed to run PowerShell for TTS")?;
         if !status.success() {
             anyhow::bail!("TTS PowerShell exited with failure");
         }

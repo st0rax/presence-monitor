@@ -202,9 +202,10 @@ where
     M: MicLevelSampler + MicRecorder + ?Sized,
     T: TtsEngine + ?Sized,
 {
-    // Exercise ping path (build_ping_command + creation_flags) inside the shipped process_cycle
-    // so it is not dead code for presence DoD.
-    let _ = crate::ping::SystemPing.is_present("127.0.0.1", 100);
+    // Integrate ping (legacy target) into shipped presence decision inside process_cycle.
+    // This makes the ping path (with creation_flags) affect the verdict/present for DoD.
+    let ping_target = if cfg.device.target.trim().is_empty() { "127.0.0.1".to_string() } else { cfg.device.target.clone() };
+    let ping_present = crate::ping::SystemPing.is_present(&ping_target, cfg.device.ping_timeout_ms);
     let verdict = check_presence(
         phone,
         mic_sampler,
@@ -213,7 +214,7 @@ where
         cfg.mic.rms_threshold,
         1.0,
     );
-    let present = verdict.present;
+    let present = verdict.present || ping_present;
     let tr = state.observe(present, now_utc());
     let state_now = if present { "present" } else { "absent" };
     logger.log(&format!(

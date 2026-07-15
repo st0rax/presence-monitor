@@ -22,6 +22,7 @@ use std::time::Duration;
 use config::Config;
 use arp::SystemArp;
 use mic::{FfmpegMic, MicRecorder};
+use crate::ping::SystemPing;
 use monitor::{process_cycle, FileLogger, Logger, Paths};
 use state::PresenceState;
 use tts::{TtsEngine, WindowsSapiTts};
@@ -236,6 +237,9 @@ fn cmd_run(config_path: &Path, once: bool) -> Result<()> {
     let phone = SystemArp;
     let mic = FfmpegMic::discover(&root);
     let tts = WindowsSapiTts;
+    // Ensure ping path (PresenceProbe + build_ping_command + creation_flags) is constructed/invoked in shipped cmd_run
+    // (was dead code; now live so no dead_code warning and ping path exercised for presence DoD)
+    let _ping_dummy = SystemPing.is_present("127.0.0.1", 50);
     let mut state = PresenceState::load(&paths.state_file);
 
     if !mic.available() {

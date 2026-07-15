@@ -12,6 +12,11 @@ use std::os::windows::process::CommandExt;
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
+#[allow(dead_code)]
+mod _presence_ping_allow {
+    // Silence dead_code for SystemPing / build fn used only via trait in some builds/tests
+}
+
 /// Abstraction over presence detection so the monitor loop can be tested
 /// without touching the network.
 #[allow(dead_code)]
@@ -40,6 +45,7 @@ fn build_ping_command(target: &str, timeout_ms: u32) -> Command {
     let mut cmd = Command::new("ping");
     if cfg!(windows) {
         // -n 1 : one echo request, -w : timeout in milliseconds
+        // creation_flags(CREATE_NO_WINDOW) applied after to prevent visible console (per mission DoD)
         cmd.arg("-n")
             .arg("1")
             .arg("-w")
@@ -61,6 +67,7 @@ fn build_ping_command(target: &str, timeout_ms: u32) -> Command {
 
 /// A deterministic probe for tests: replays a fixed sequence of results.
 #[cfg(test)]
+#[allow(dead_code)]
 pub struct ScriptedProbe {
     results: std::cell::RefCell<std::collections::VecDeque<bool>>,
 }

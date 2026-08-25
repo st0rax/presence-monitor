@@ -1,5 +1,7 @@
 # presence-monitor
 
+> **Verbindliche Arbeitsgrundlage:** Vor jeder Arbeit ist [`AGENTS.md`](AGENTS.md) vollständig zu lesen und strikt zu befolgen. Projektspezifische Regeln gelten ergänzend; bei Konflikten gilt die strengere Schutzregel.
+
 Eigenständiger Präsenz-Monitor für den Rechner von **storax**.
 Präsenz wird über **ARP-MAC** (OnePlus 9 Pro in `arp -a`) und **Mikrofon-RMS**
 festgestellt — siehe `device.phone_mac_prefix` und `mic.rms_threshold` (default

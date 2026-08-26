@@ -29,7 +29,7 @@ CLI: `presence-monitor run` (Dauerbetrieb), `presence-monitor run --once`,
 `v2.0.0`, Autostart über `start-monitor.ps1`. PowerShell (`presence_monitor.ps1`)
 bleibt als Fallback (nicht empfohlen).
 
-**Deprecated:** Die Python-Referenz `presence/presence_check.py` (bzw. `Desktop/presence/presence_check.py`) wird nicht mehr gepflegt und ist als Fallback obsolet. Der Rust-Build (`presence-monitor.exe`) ist der primäre und einzige unterstützte Implementierung.
+**Deprecated:** Die Python-Referenz `presence/presence_check.py` (bzw. `Desktop/presence/presence_check.py`) wird nicht mehr gepflegt und ist als Fallback obsolet. Der Rust-Build (`presence-monitor.exe`) ist der primäre und einzige unterstützte Implementierung. Die erhaltene Schwellen-, ARP-/SSID- und Fehlverhaltensspezifikation steht in [`docs/legacy-python-reference.md`](docs/legacy-python-reference.md); sie ist Historie, kein zweiter Implementierungsweg.
 
 ## Funktionsweise
 

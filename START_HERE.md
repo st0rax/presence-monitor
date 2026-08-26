@@ -76,11 +76,13 @@ Nice-to-haves:
 
 Die Python-Referenz `presence/presence_check.py`
 (`github.com/st0rax/home-presence`, kanonisch unter `Desktop\presence\`) ist
-**deprecated**, bleibt nur Verhaltensvorlage. ⚠️ Ein Duplikat unter
+**deprecated**. Ihre verbliebenen Verhaltensdetails sind jetzt im aktuellen
+Repository unter [`docs/legacy-python-reference.md`](docs/legacy-python-reference.md)
+festgehalten; dieser Rust-Bestand ist die alleinige Implementierungs- und
+Dokumentationsquelle. ⚠️ Ein Duplikat unter
 `Desktop\webagent\presence\presence_check.py` ist **ungetrackt**
 (`webagent/.gitignore` ignoriert `presence/`) — Änderungen dort gehen
-verloren, immer die kanonische Datei bearbeiten, falls die Python-Referenz
-je wieder angefasst wird (eigentlich: nicht anfassen, siehe oben).
+verloren und dürfen nicht als Quelle verwendet werden.
 
 Zwei weitere, komplett unabhängige Projekte existieren daneben: `webagent`/
 `webagent-rs` (`github.com/st0rax/webagent-rs`) und `bot2bot`

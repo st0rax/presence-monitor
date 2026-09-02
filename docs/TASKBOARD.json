@@ -10,13 +10,13 @@
       "id": "PM-010",
       "title": "Bazaar in place: START_HERE, GOALS, WORK_CONTRACT, TASKBOARD.json, GIT_AGENTS",
       "type": "docs",
-      "status": "claimed",
+      "status": "done",
       "owner": "pflege",
       "branch": "docs/PM-010-bazaar-in-place",
       "claimed_at": "2026-09-02",
-      "done_at": null,
-      "proof_path": null,
-      "verification": "PR against master; START_HERE is Bazaar entry not the only file; GOALS G-001 not a claim; TASKBOARD.json valid; identities @presence.local; cargo test still the repo gate; AGENTS.md and MISSION.md still present",
+      "done_at": "2026-09-02",
+      "proof_path": "https://github.com/st0rax/presence-monitor/pull/2",
+      "verification": "PR merged against master; START_HERE is Bazaar entry not the only file; GOALS G-001 not a claim; TASKBOARD.json valid; identities @presence.local; cargo test still the repo gate; AGENTS.md and MISSION.md still present",
       "dod": "Bazaar files on branch/PR. Dummy, HomBot, webagent-rs, bot2bot, jewtube untouched. AGENTS.md and MISSION.md not flattened. No markdown taskboard. No Dummy PLAN/DOSSIER/PENSIEVE. No HomBot ice/UART/STATUS_LIVE.",
       "depends_on": []
     },
@@ -66,7 +66,7 @@
       "id": "PM-014",
       "title": "CI docs/pflicht: GOALS.md, docs/WORK_CONTRACT.md, docs/TASKBOARD.json, docs/GIT_AGENTS.md verlangen",
       "type": "fix",
-      "status": "blocked",
+      "status": "free",
       "owner": null,
       "branch": null,
       "claimed_at": null,
@@ -74,7 +74,9 @@
       "proof_path": ".github/workflows/ci.yml",
       "verification": "cargo test; CI fails if any bazaar file is missing",
       "dod": "Required-files list includes Bazaar files after PM-010 landed. Existing cargo fmt/clippy/test/build stay. Windows-latest bleibt.",
-      "depends_on": ["PM-010"]
+      "depends_on": [
+        "PM-010"
+      ]
     }
   ]
 }

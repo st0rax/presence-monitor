@@ -1,0 +1,80 @@
+{
+  "project": "presence-monitor",
+  "created": "2026-09-02",
+  "owner": "st0rax",
+  "default_branch": "master",
+  "verification": "cargo test",
+  "note": "JSON is truth. One id, one developer. G-001 is Nordstern, not a claim cell. Kante = depends_on; never pull a verkettete Aufgabe in parallel. This repo IS Rust: cargo test / cargo test --lib is the gate. No markdown board to sync.",
+  "tasks": [
+    {
+      "id": "PM-010",
+      "title": "Bazaar in place: START_HERE, GOALS, WORK_CONTRACT, TASKBOARD.json, GIT_AGENTS",
+      "type": "docs",
+      "status": "claimed",
+      "owner": "pflege",
+      "branch": "docs/PM-010-bazaar-in-place",
+      "claimed_at": "2026-09-02",
+      "done_at": null,
+      "proof_path": null,
+      "verification": "PR against master; START_HERE is Bazaar entry not the only file; GOALS G-001 not a claim; TASKBOARD.json valid; identities @presence.local; cargo test still the repo gate; AGENTS.md and MISSION.md still present",
+      "dod": "Bazaar files on branch/PR. Dummy, HomBot, webagent-rs, bot2bot, jewtube untouched. AGENTS.md and MISSION.md not flattened. No markdown taskboard. No Dummy PLAN/DOSSIER/PENSIEVE. No HomBot ice/UART/STATUS_LIVE.",
+      "depends_on": []
+    },
+    {
+      "id": "PM-011",
+      "title": "Loopback-Fallback klaeren: leeres device.target wird in monitor.rs auf 127.0.0.1 gesetzt; Loopback-Ping ist keine Anwesenheit",
+      "type": "fix",
+      "status": "free",
+      "owner": null,
+      "branch": null,
+      "claimed_at": null,
+      "done_at": null,
+      "proof_path": "src/monitor.rs",
+      "verification": "cargo test",
+      "dod": "Leeres oder unerreichbares Target setzt ping_present nicht wahr via Loopback. Verhalten in START_HERE/CODE_REVIEW und Code deckungsgleich (Befund nannte ping.rs, Code sitzt in monitor.rs). cargo test gruen.",
+      "depends_on": []
+    },
+    {
+      "id": "PM-012",
+      "title": "Hardware-Integrationstest dokumentieren oder #[ignore]-Test fuer mic/tts/arp",
+      "type": "test",
+      "status": "free",
+      "owner": null,
+      "branch": null,
+      "claimed_at": null,
+      "done_at": null,
+      "proof_path": "README.md",
+      "verification": "cargo test",
+      "dod": "Entweder ein #[ignore]-Test der unter Windows laeuft und im CI uebersprungen wird, oder README/START_HERE sagen explizit, dass mic/tts/arp nur manuell via self-check/run --once getestet sind. Kein erfundener Live-Pass.",
+      "depends_on": []
+    },
+    {
+      "id": "PM-013",
+      "title": "Unit-Test fuer PRESENCE_* Env-Overrides (z. B. PRESENCE_MIC_THRESH gegen config.json-Default)",
+      "type": "test",
+      "status": "free",
+      "owner": null,
+      "branch": null,
+      "claimed_at": null,
+      "done_at": null,
+      "proof_path": "src/config.rs",
+      "verification": "cargo test --lib",
+      "dod": "Mindestens ein Test, der apply_env_overrides gegen den Datei-Default prueft (z. B. PRESENCE_MIC_THRESH). cargo test --lib gruen. Kein Secret, kein Host-Credential.",
+      "depends_on": []
+    },
+    {
+      "id": "PM-014",
+      "title": "CI docs/pflicht: GOALS.md, docs/WORK_CONTRACT.md, docs/TASKBOARD.json, docs/GIT_AGENTS.md verlangen",
+      "type": "fix",
+      "status": "blocked",
+      "owner": null,
+      "branch": null,
+      "claimed_at": null,
+      "done_at": null,
+      "proof_path": ".github/workflows/ci.yml",
+      "verification": "cargo test; CI fails if any bazaar file is missing",
+      "dod": "Required-files list includes Bazaar files after PM-010 landed. Existing cargo fmt/clippy/test/build stay. Windows-latest bleibt.",
+      "depends_on": ["PM-010"]
+    }
+  ]
+}

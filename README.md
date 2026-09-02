@@ -1,6 +1,8 @@
 # presence-monitor
 
 > **Verbindliche Arbeitsgrundlage:** Vor jeder Arbeit ist [`AGENTS.md`](AGENTS.md) vollständig zu lesen und strikt zu befolgen. Projektspezifische Regeln gelten ergänzend; bei Konflikten gilt die strengere Schutzregel.
+>
+> **Bazaar:** Einstieg [`START_HERE.md`](START_HERE.md) → Nordstern [`GOALS.md`](GOALS.md) → Claim-Tafel [`docs/TASKBOARD.json`](docs/TASKBOARD.json) (JSON ist Wahrheit). Vertrag: [`docs/WORK_CONTRACT.md`](docs/WORK_CONTRACT.md).
 
 Eigenständiger Präsenz-Monitor für den Rechner von **storax**.
 Präsenz wird über **ARP-MAC** (OnePlus 9 Pro in `arp -a`) und **Mikrofon-RMS**
